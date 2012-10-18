@@ -15,7 +15,7 @@ def main():
     p.add_option('-a', '--add', action='store_true', help='add new note (DEFAULT mode)')
     p.add_option('-e', '--edit', action='store_true', help='edit existing note')
     p.add_option('-l', '--list', dest="list_all", action='store_true', help='list notes')
-    p.add_option('-r', '--report', action='store_true', help='list ALL notes, ever')
+    p.add_option('-r', '--report', action='store_true', help='list all notes')
     p.add_option('-d', '--date', metavar="YYYY-MM-DD", help='specify date (DEFAULT=today)')
     p.set_defaults(verbose=False, add=False, edit=False,
             list_all=False, report=False, date=str(datetime.date.today()))
@@ -38,7 +38,7 @@ def main():
         error("Can't parse option date")
 
     actions = [add_note, edit_note, list_notes, list_notes]
-    actions[mode]((when, 0)[mode == REPORTMODE], (86400, sys.maxint)[mode == REPORTMODE])
+    actions[mode]((when, 0)[mode == REPORTMODE], 86400 + (0, when)[mode == REPORTMODE])
 
 def error(msg):
     logging.error(msg)
@@ -71,20 +71,24 @@ def user_input(prompt):
 
 def show_notes(query_results):
     options = list()
+    verbose = logging.getLogger().level == logging.DEBUG
+    print((HEADER, "")[verbose])
     for row in query_results:
         options.append(row[0])
         dt = datetime.datetime.fromtimestamp(row[2])
-        lines = row[1].splitlines()
-        note = (lines[0], lines[0] + ' (cont...)')[len(lines) > 1]
-        print("| %4d | %s | %s | %s" % (len(options), dt.date(), dt.time(), note))
+        if verbose:
+            print("%d\tDate: %s    Time: %s\n" % (len(options), dt.date(), dt.time()) +
+                    '-' * 42 + "\n%s\n\n" % (row[1]))
+        else:
+            lines = row[1].splitlines()
+            note = (lines[0], lines[0] + ' (cont...)')[len(lines) > 1]
+            print("| %4d | %s | %s | %s" % (len(options), dt.date(), dt.time(), note))
     return options
 
 def list_notes(when, delta):
-    print(HEADER)
     show_notes(query("select * from notes where stamp between ? and ?", (when, when + delta)))
 
 def edit_note(when, delta):
-    print(HEADER)
     options = show_notes(query("select * from notes where stamp between ? and ?", (when, when + delta)))
     try:
         choice = int(raw_input("Choice? "))     # int() cast will raise ValueError on bad cast
