@@ -2,7 +2,7 @@
 mininote
 **********
 
-A 90-line note-taking tool
+A <100-line note-taking tool
 
 Goals
 ========
